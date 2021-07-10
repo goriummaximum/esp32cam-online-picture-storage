@@ -194,13 +194,13 @@ void mqtt_public_frame(camera_fb_t *fb)
 
 void message_received(char* topic, byte* payload, unsigned int length)
 {   
-    digitalWrite(FLASH, HIGH);
     char *decoded_payload = (char *)malloc(length + 1);
     memcpy(decoded_payload, payload, length);
     decoded_payload[length] = '\0'; //add \0 because payload dont have \0
 
     if (!strcmp(decoded_payload, GET))
-    {
+    {   
+        digitalWrite(FLASH, HIGH);
         camera_fb_t *fb = esp_camera_fb_get();
         if(fb)
         {
@@ -210,7 +210,7 @@ void message_received(char* topic, byte* payload, unsigned int length)
             mqtt_public_frame(fb);
         }
         esp_camera_fb_return(fb);
+        digitalWrite(FLASH, LOW);
     }
     free(decoded_payload);
-    digitalWrite(FLASH, LOW);
 }
