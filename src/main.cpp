@@ -7,6 +7,9 @@
 #include <WiFi.h>
 #include <base64.h>
 
+//LED
+#define FLASH 4
+
 //WiFi
 const char *ssid = "narhoa"; 
 const char *password = "nhathuduc123";
@@ -19,6 +22,8 @@ const char *device_id = "esp32cam";
 const char *up_topic = "/esp32cam/up";
 const char *down_topic = "/esp32cam/down";
 PubSubClient mqtt_client(wifi_client);
+
+#define GET "GET"
 
 //Camera pins
 #define PWDN_GPIO_NUM     32
@@ -39,11 +44,6 @@ PubSubClient mqtt_client(wifi_client);
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
-//timing settings
-unsigned long interval_start = millis();
-unsigned long interval_end = 0;
-unsigned long interval = 5000;
-
 void camera_init();
 void wifi_connect();
 void mqtt_connect();
@@ -54,6 +54,7 @@ void mqtt_public_frame(camera_fb_t *fb);
 
 void setup() {
     Serial.begin(115200);
+    pinMode(FLASH, OUTPUT);
     camera_init();
     connect();
 }
@@ -64,22 +65,6 @@ void loop() {
       connect();
     }
     mqtt_client.loop();
-
-    interval_end = millis();
-    if (interval_end - interval_start >= interval)
-    { 
-        //take picture
-        camera_fb_t *fb = esp_camera_fb_get();
-        if(fb)
-        {
-            Serial.print("taken successfully! len: ");
-            Serial.println(fb->len);
-            //mqtt publish
-            mqtt_public_frame(fb);
-        }
-        esp_camera_fb_return(fb);
-        interval_start = interval_end;
-    }
 }
 
 void camera_init()
@@ -166,8 +151,6 @@ void wifi_connect()
 
   Serial.println("");
   Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
 }
 
 void mqtt_connect()
@@ -210,6 +193,24 @@ void mqtt_public_frame(camera_fb_t *fb)
 }
 
 void message_received(char* topic, byte* payload, unsigned int length)
-{
+{   
+    digitalWrite(FLASH, HIGH);
+    char *decoded_payload = (char *)malloc(length + 1);
+    memcpy(decoded_payload, payload, length);
+    decoded_payload[length] = '\0'; //add \0 because payload dont have \0
 
+    if (!strcmp(decoded_payload, GET))
+    {
+        camera_fb_t *fb = esp_camera_fb_get();
+        if(fb)
+        {
+            Serial.print("taken successfully! len: ");
+            Serial.println(fb->len);
+            //mqtt publish
+            mqtt_public_frame(fb);
+        }
+        esp_camera_fb_return(fb);
+    }
+    free(decoded_payload);
+    digitalWrite(FLASH, LOW);
 }
