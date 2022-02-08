@@ -187,7 +187,7 @@ String serialize_json(camera_fb_t *fb)
 void mqtt_public_frame(camera_fb_t *fb)
 {   
     String encoded_frame = serialize_json(fb);
-    mqtt_client.beginPublish("/esp32cam/up", encoded_frame.length(), false);
+    mqtt_client.beginPublish(up_topic, encoded_frame.length(), false);
     mqtt_client.print(encoded_frame);
     mqtt_client.endPublish();
 }
